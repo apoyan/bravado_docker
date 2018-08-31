@@ -1,0 +1,60 @@
+version: "3.6"
+
+services:
+  rails:
+    build: ./rails/.
+    image: rails:latest
+    entrypoint: ["/.docker/wait-for-it.sh", "postgres:5432", "--timeout=120", "--"]
+    command: "/.docker/db-and-start-rails.sh"
+    environment:
+      AUTH_USERNAME: "bravado"
+      AUTH_PASSWORD: "secret"
+    volumes:
+      - ./.docker:/.docker
+    ports:
+       - 3000:3000
+    depends_on:
+      - postgres
+  sinatra:
+    image: ruby:latest
+    build: ./sinatra/.
+    entrypoint: ["/.docker/wait-for-it.sh", "elasticsearch:9200", "--timeout=120", "--"]
+    command: 'ruby app.rb'
+    volumes:
+      - ./.docker:/.docker
+    ports:
+      - 3001:4567
+    links:
+      - elasticsearch
+  sidekiq:
+    image: rails:latest
+    entrypoint: ["/.docker/wait-for-it.sh", "postgres:5432", "--timeout=120", "--"]
+    command: "/.docker/start_sidekiq.sh"
+    environment:
+      SIDEKIQ_PIDFILE: "tmp/pids/sidekiq.pid"
+      SIDEKIQ_LOGFILE: "log/sidekiq.log"
+    volumes:
+      - ./rails:/app
+      - ./.docker:/.docker
+    depends_on:
+      - redis
+      - postgres
+      - elasticsearch
+  postgres:
+    image: postgres:latest
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_USER=bravado
+      - PGPASSWORD=bravado
+      - PGDATA=/db
+    volumes:
+      - ./shared/postgres_data:/db
+  elasticsearch:
+    image: elasticsearch:latest
+    ports:
+      - 9200:9200
+  redis:
+    image: redis:latest
+    ports:
+      - 6379:6379

@@ -1,0 +1,10 @@
+version: "2"
+
+options:
+  verbose: true
+
+syncs:
+  rails-sync:
+    src: './rails'
+    sync_excludes: ['.git', 'log', '.idea', 'tmp']
+    # sync_excludes_type: 'none'
